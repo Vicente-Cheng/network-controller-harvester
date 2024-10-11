@@ -2,6 +2,13 @@ package v1beta2
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+const (
+	BackingImageParameterName                 = "backingImage"
+	BackingImageParameterDataSourceType       = "backingImageDataSourceType"
+	BackingImageParameterChecksum             = "backingImageChecksum"
+	BackingImageParameterDataSourceParameters = "backingImageDataSourceParameters"
+)
+
 // BackingImageDownloadState is replaced by BackingImageState.
 type BackingImageDownloadState string
 
@@ -14,6 +21,7 @@ const (
 	BackingImageStateReady            = BackingImageState("ready")
 	BackingImageStateInProgress       = BackingImageState("in-progress")
 	BackingImageStateFailed           = BackingImageState("failed")
+	BackingImageStateFailedAndCleanUp = BackingImageState("failed-and-cleanup")
 	BackingImageStateUnknown          = BackingImageState("unknown")
 )
 
@@ -38,9 +46,6 @@ type BackingImageSpec struct {
 	SourceType BackingImageDataSourceType `json:"sourceType"`
 	// +optional
 	SourceParameters map[string]string `json:"sourceParameters"`
-	// Deprecated: This kind of info will be included in the related BackingImageDataSource.
-	// +optional
-	ImageURL string `json:"imageURL"`
 }
 
 // BackingImageStatus defines the observed state of the Longhorn backing image status
@@ -51,6 +56,9 @@ type BackingImageStatus struct {
 	UUID string `json:"uuid"`
 	// +optional
 	Size int64 `json:"size"`
+	// Virtual size of image, which may be larger than physical size. Will be zero until known (e.g. while a backing image is uploading)
+	// +optional
+	VirtualSize int64 `json:"virtualSize"`
 	// +optional
 	Checksum string `json:"checksum"`
 	// +optional
@@ -59,14 +67,6 @@ type BackingImageStatus struct {
 	// +optional
 	// +nullable
 	DiskLastRefAtMap map[string]string `json:"diskLastRefAtMap"`
-	// Deprecated: Replaced by field `State` in `DiskFileStatusMap`.
-	// +optional
-	// +nullable
-	DiskDownloadStateMap map[string]BackingImageDownloadState `json:"diskDownloadStateMap"`
-	// Deprecated: Replaced by field `Progress` in `DiskFileStatusMap`.
-	// +optional
-	// +nullable
-	DiskDownloadProgressMap map[string]int `json:"diskDownloadProgressMap"`
 }
 
 // +genclient
@@ -77,6 +77,7 @@ type BackingImageStatus struct {
 // +kubebuilder:printcolumn:name="UUID",type=string,JSONPath=`.status.uuid`,description="The system generated UUID"
 // +kubebuilder:printcolumn:name="SourceType",type=string,JSONPath=`.spec.sourceType`,description="The source of the backing image file data"
 // +kubebuilder:printcolumn:name="Size",type=string,JSONPath=`.status.size`,description="The backing image file size in each disk"
+// +kubebuilder:printcolumn:name="VirtualSize",type=string,JSONPath=`.status.virtualSize`,description="The virtual size of the image (may be larger than file size)"
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // BackingImage is where Longhorn stores backing image object.
